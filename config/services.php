@@ -35,4 +35,14 @@ return [
         ],
     ],
 
+    'sms_tracker' => [
+        'api_key' => env('SMS_TRACKER_API_KEY', ''),
+        'api_url' => env('SMS_TRACKER_API_URL', 'https://www.traccar.org/sms/'),
+    ],
+
+    'fcm' => [
+        'service_account_path' => env('FCM_SERVICE_ACCOUNT_PATH', storage_path('app/firebase/fcm-service-account.json')),
+        'sender_id' => env('FCM_SENDER_ID', ''),
+    ],
+
 ];
