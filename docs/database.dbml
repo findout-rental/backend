@@ -1,0 +1,295 @@
+// FindOut - Apartment Rental Application
+// Entity-Relationship Diagram (ERD)
+// Use this file at https://dbdiagram.io/
+
+Project FindOut {
+  database_type: 'MySQL'
+  Note: 'Apartment Rental Application Database Schema'
+}
+
+// =====================================================
+// Table: users
+// Description: Stores all user information including tenants, owners, and admins
+// =====================================================
+Table users {
+  id bigint [pk, increment, note: 'Unique user identifier']
+  mobile_number varchar(20) [unique, not null, note: 'User mobile number for login']
+  password varchar(255) [not null, note: 'Hashed password for authentication']
+  first_name varchar(100) [not null, note: 'User first name']
+  last_name varchar(100) [not null, note: 'User last name']
+  personal_photo varchar(255) [not null, note: 'Path to personal photo']
+  date_of_birth date [not null, note: 'User date of birth']
+  id_photo varchar(255) [not null, note: 'Path to ID photo']
+  role user_role [not null, note: 'User role: tenant, owner, or admin']
+  status user_status [not null, default: 'pending', note: 'Registration status']
+  language_preference language_pref [default: 'en', note: 'Preferred language']
+  balance decimal(10,2) [not null, default: 0.00, note: 'User account balance']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Registration date']
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Last update date']
+  
+  indexes {
+    role [name: 'idx_role']
+    status [name: 'idx_status']
+  }
+}
+
+// =====================================================
+// Table: apartments
+// Description: Stores apartment information including location, specifications, and photos
+// =====================================================
+Table apartments {
+  id bigint [pk, increment, note: 'Unique apartment identifier']
+  owner_id bigint [ref: > users.id, not null, note: 'Reference to owner']
+  governorate varchar(100) [not null, note: 'Governorate name (English)']
+  governorate_ar varchar(100) [note: 'Governorate name (Arabic)']
+  city varchar(100) [not null, note: 'City name (English)']
+  city_ar varchar(100) [note: 'City name (Arabic)']
+  address text [not null, note: 'Full address (English)']
+  address_ar text [note: 'Full address (Arabic)']
+  nightly_price decimal(10,2) [not null, note: 'Price per night/day']
+  monthly_price decimal(10,2) [not null, note: 'Price per month (30 days)']
+  bedrooms tinyint [not null, note: 'Number of bedrooms']
+  bathrooms tinyint [not null, note: 'Number of bathrooms']
+  living_rooms tinyint [not null, note: 'Number of living rooms']
+  size decimal(8,2) [not null, note: 'Apartment size in square meters']
+  description text [note: 'Apartment description (English)']
+  description_ar text [note: 'Apartment description (Arabic)']
+  photos json [note: 'Array of photo paths']
+  amenities json [note: 'Array of amenity keys for frontend translation']
+  status apartment_status [not null, default: 'active', note: 'Apartment status']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Creation date']
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Last update date']
+  
+  indexes {
+    owner_id [name: 'idx_owner']
+    governorate [name: 'idx_governorate']
+    governorate_ar [name: 'idx_governorate_ar']
+    city [name: 'idx_city']
+    city_ar [name: 'idx_city_ar']
+    status [name: 'idx_status']
+    nightly_price [name: 'idx_nightly_price']
+  }
+}
+
+// =====================================================
+// Table: bookings
+// Description: Stores booking information including dates, status, and payment method
+// =====================================================
+Table bookings {
+  id bigint [pk, increment, note: 'Unique booking identifier']
+  tenant_id bigint [ref: > users.id, not null, note: 'Reference to tenant']
+  apartment_id bigint [ref: > apartments.id, not null, note: 'Reference to apartment']
+  check_in_date date [not null, note: 'Check-in date']
+  check_out_date date [not null, note: 'Check-out date']
+  number_of_guests tinyint [note: 'Number of guests']
+  payment_method varchar(50) [not null, note: 'Payment method confirmation']
+  total_rent decimal(10,2) [not null, note: 'Total rent amount calculated for this booking']
+  status booking_status [not null, default: 'pending', note: 'Booking status']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Booking creation date']
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Last update date']
+  
+  indexes {
+    (tenant_id, status) [name: 'idx_tenant_status']
+    apartment_id [name: 'idx_apartment']
+    status [name: 'idx_status']
+    (check_in_date, check_out_date) [name: 'idx_dates']
+  }
+  
+  Note: 'Check-out date must be after check-in date'
+}
+
+// =====================================================
+// Table: ratings
+// Description: Stores apartment ratings and reviews from tenants
+// =====================================================
+Table ratings {
+  id bigint [pk, increment, note: 'Unique rating identifier']
+  booking_id bigint [ref: - bookings.id, unique, not null, note: 'One-to-one with booking']
+  apartment_id bigint [ref: > apartments.id, not null, note: 'Reference to apartment']
+  tenant_id bigint [ref: > users.id, not null, note: 'Reference to tenant']
+  rating tinyint [not null, note: 'Rating (1-5 stars)']
+  review_text text [note: 'Optional review text']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Rating date']
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Last update date']
+  
+  indexes {
+    apartment_id [name: 'idx_apartment']
+  }
+  
+  Note: 'One rating per booking (UNIQUE on booking_id)'
+}
+
+// =====================================================
+// Table: favorites
+// Description: Stores tenant's favorite apartments
+// =====================================================
+Table favorites {
+  id bigint [pk, increment, note: 'Unique favorite identifier']
+  tenant_id bigint [ref: > users.id, not null, note: 'Reference to tenant']
+  apartment_id bigint [ref: > apartments.id, not null, note: 'Reference to apartment']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'When apartment was favorited']
+  
+  indexes {
+    (tenant_id, apartment_id) [unique, name: 'uk_tenant_apartment']
+    tenant_id [name: 'idx_tenant']
+    apartment_id [name: 'idx_apartment']
+  }
+  
+  Note: 'Prevents duplicate favorites (same tenant, same apartment)'
+}
+
+// =====================================================
+// Table: messages
+// Description: Stores in-app messages between users (tenants and owners)
+// =====================================================
+Table messages {
+  id bigint [pk, increment, note: 'Unique message identifier']
+  sender_id bigint [ref: > users.id, not null, note: 'Reference to sender']
+  recipient_id bigint [ref: > users.id, not null, note: 'Reference to recipient']
+  message_text text [not null, note: 'Message content']
+  attachment_path varchar(255) [note: 'Path to attached file/image']
+  is_read boolean [default: false, note: 'Read status']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Message timestamp']
+  updated_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Last update date']
+  
+  indexes {
+    (sender_id, recipient_id) [name: 'idx_conversation']
+    (recipient_id, is_read) [name: 'idx_recipient_read']
+    created_at [name: 'idx_created']
+  }
+  
+  Note: 'Any user can message any other user'
+}
+
+// =====================================================
+// Table: notifications
+// Description: Stores system notifications for users
+// =====================================================
+Table notifications {
+  id bigint [pk, increment, note: 'Unique notification identifier']
+  user_id bigint [ref: > users.id, not null, note: 'Reference to user']
+  type varchar(50) [not null, note: 'Notification type']
+  title varchar(255) [not null, note: 'Notification title (English)']
+  title_ar varchar(255) [note: 'Notification title (Arabic)']
+  message text [not null, note: 'Notification message (English)']
+  message_ar text [note: 'Notification message (Arabic)']
+  booking_id bigint [ref: > bookings.id, note: 'Reference to booking (if related)']
+  is_read boolean [default: false, note: 'Read status']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Notification timestamp']
+  
+  indexes {
+    (user_id, is_read) [name: 'idx_user_read']
+    created_at [name: 'idx_created']
+  }
+  
+  Note: 'Notifications sent for all booking status changes. Backend generates in both languages.'
+}
+
+// =====================================================
+// Table: otp_verifications
+// Description: Stores OTP codes for registration verification only
+// =====================================================
+Table otp_verifications {
+  id bigint [pk, increment, note: 'Unique OTP identifier']
+  mobile_number varchar(20) [not null, note: 'Mobile number for verification']
+  otp_code varchar(6) [not null, note: '6-digit OTP code']
+  expires_at timestamp [not null, note: 'OTP expiration time']
+  verified_at timestamp [note: 'When OTP was verified']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'OTP creation time']
+  
+  indexes {
+    (mobile_number, expires_at) [name: 'idx_mobile']
+    expires_at [name: 'idx_expires']
+  }
+  
+  Note: 'OTP is used ONLY for registration verification, not for login'
+}
+
+// =====================================================
+// Table: transactions
+// Description: Stores all balance transactions (deposits, withdrawals, payments, refunds)
+// =====================================================
+Table transactions {
+  id bigint [pk, increment, note: 'Unique transaction identifier']
+  user_id bigint [ref: > users.id, not null, note: 'Reference to user whose balance is affected']
+  type transaction_type [not null, note: 'Transaction type']
+  amount decimal(10,2) [not null, note: 'Transaction amount (positive for deposits, negative for withdrawals)']
+  related_booking_id bigint [ref: > bookings.id, note: 'Reference to booking (if transaction is related to booking)']
+  related_user_id bigint [ref: > users.id, note: 'Reference to related user (e.g., owner in rent payment)']
+  description text [note: 'Transaction description/notes']
+  created_at timestamp [default: `CURRENT_TIMESTAMP`, note: 'Transaction timestamp']
+  
+  indexes {
+    user_id [name: 'idx_user']
+    type [name: 'idx_type']
+    related_booking_id [name: 'idx_booking']
+    created_at [name: 'idx_created']
+  }
+  
+  Note: 'Tracks all balance changes for audit trail. Amount can be positive (deposit) or negative (withdrawal).'
+}
+
+// =====================================================
+// ENUMS
+// =====================================================
+Enum user_role {
+  tenant
+  owner
+  admin
+}
+
+Enum user_status {
+  pending
+  approved
+  rejected
+}
+
+Enum language_pref {
+  ar
+  en
+}
+
+Enum apartment_status {
+  active
+  inactive
+  deleted
+}
+
+Enum booking_status {
+  pending
+  approved
+  rejected
+  cancelled
+  modified_pending
+  modified_approved
+  modified_rejected
+  completed
+}
+
+Enum transaction_type {
+  deposit
+  withdrawal
+  rent_payment
+  refund
+  cancellation_fee
+}
+
+// =====================================================
+// RELATIONSHIPS SUMMARY
+// =====================================================
+// 1. Users (1) -> (M) Apartments (owner_id) - One owner can have many apartments
+// 2. Users (1) -> (M) Bookings (tenant_id) - One tenant can have many bookings
+// 3. Users (1) -> (M) Ratings (tenant_id) - One tenant can give many ratings
+// 4. Users (1) -> (M) Favorites (tenant_id) - One tenant can have many favorites
+// 5. Users (1) -> (M) Messages (sender_id) - One user can send many messages
+// 6. Users (1) -> (M) Messages (recipient_id) - One user can receive many messages
+// 7. Users (1) -> (M) Notifications (user_id) - One user can have many notifications
+// 8. Apartments (1) -> (M) Bookings (apartment_id) - One apartment can have many bookings
+// 9. Apartments (1) -> (M) Ratings (apartment_id) - One apartment can have many ratings
+// 10. Apartments (1) -> (M) Favorites (apartment_id) - One apartment can be favorited by many
+// 11. Bookings (1) -> (1) Ratings (booking_id) - One booking can have one rating
+// 12. Bookings (1) -> (M) Notifications (booking_id) - One booking can generate many notifications
+// 13. Users (1) -> (M) Transactions (user_id) - One user can have many transactions
+// 14. Bookings (1) -> (M) Transactions (related_booking_id) - One booking can have multiple transactions
+// =====================================================
+
