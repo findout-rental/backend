@@ -40,6 +40,14 @@ Route::middleware(['auth:api', 'approved', 'otp.verified'])->group(function () {
     // View another user's profile (available to all authenticated users)
     Route::get('/users/{userId}', [\App\Http\Controllers\UserController::class, 'show']);
 
+    // Notification routes (shared between tenants and owners)
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
+        Route::put('/{id}/read', [\App\Http\Controllers\NotificationController::class, 'markAsRead']);
+        Route::put('/read-all', [\App\Http\Controllers\NotificationController::class, 'markAllAsRead']);
+        Route::post('/fcm-token', [\App\Http\Controllers\NotificationController::class, 'updateFcmToken']);
+    });
+
     // Messaging routes (shared between tenants and owners)
     Route::prefix('messages')->group(function () {
         // HTTP endpoints (for initial load and file uploads)

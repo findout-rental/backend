@@ -111,6 +111,42 @@ class NotificationService
                 $content['message_ar'] = 'تمت الموافقة على حسابك. يمكنك الآن استخدام جميع الميزات.';
                 break;
 
+            case 'booking_cancelled':
+                $content['title'] = 'Booking Cancelled';
+                $content['title_ar'] = 'تم إلغاء الحجز';
+                $content['message'] = 'A booking has been cancelled by the tenant.';
+                $content['message_ar'] = 'تم إلغاء الحجز من قبل المستأجر.';
+                break;
+
+            case 'booking_modified':
+                $content['title'] = 'Booking Modification Request';
+                $content['title_ar'] = 'طلب تعديل الحجز';
+                $content['message'] = 'The tenant has requested to modify their booking.';
+                $content['message_ar'] = 'طلب المستأجر تعديل الحجز.';
+                break;
+
+            case 'modification_approved':
+                $content['title'] = 'Modification Approved';
+                $content['title_ar'] = 'تمت الموافقة على التعديل';
+                $content['message'] = 'Your booking modification request has been approved by the owner.';
+                $content['message_ar'] = 'تمت الموافقة على طلب تعديل الحجز من قبل المالك.';
+                break;
+
+            case 'modification_rejected':
+                $content['title'] = 'Modification Rejected';
+                $content['title_ar'] = 'تم رفض التعديل';
+                $content['message'] = 'Your booking modification request has been rejected by the owner.';
+                $content['message_ar'] = 'تم رفض طلب تعديل الحجز من قبل المالك.';
+                break;
+
+            case 'new_review':
+                $apartmentTitle = $data['apartment_title'] ?? 'your apartment';
+                $content['title'] = 'New Review Received';
+                $content['title_ar'] = 'تم استلام تقييم جديد';
+                $content['message'] = 'You have received a new review for ' . $apartmentTitle . '.';
+                $content['message_ar'] = 'لقد تلقيت تقييماً جديداً لـ ' . $apartmentTitle . '.';
+                break;
+
             default:
                 $content['title'] = 'Notification';
                 $content['title_ar'] = 'إشعار';

@@ -32,6 +32,13 @@ Endpoints accessible by all authenticated users (Admin, Owner, Tenant).
 
 **Note:** Actual WebSocket connections are made to Laravel Reverb server (typically `ws://localhost:8080`). The `POST /api/messages/ws` endpoint is an HTTP bridge/handler. WebSocket connections cannot be tested via Postman collections - use a WebSocket client instead.
 
+### Notifications
+
+-   `GET /api/notifications` - List user's notifications - with pagination and unread count
+-   `PUT /api/notifications/{id}/read` - Mark notification as read
+-   `PUT /api/notifications/read-all` - Mark all notifications as read
+-   `POST /api/notifications/fcm-token` - Update FCM token for push notifications
+
 ### WebSocket Endpoints
 
 **Connection:** `ws://localhost:8080/app/{app_key}` (WebSocket, not HTTP)
@@ -124,8 +131,8 @@ Endpoints accessible only by users with the `tenant` role.
 
 ## Endpoint Count Summary
 
--   **Shared Endpoints:** 15 (6 authentication, 5 profile, 4 messaging)
+-   **Shared Endpoints:** 19 (6 authentication, 5 profile, 4 messaging, 4 notifications)
 -   **Admin Endpoints:** 4 (2 user management, 1 apartment, 1 booking)
 -   **Owner Endpoints:** 12 (6 apartment management, 6 booking management)
 -   **Tenant Endpoints:** 11 (2 apartment browsing, 5 booking management, 1 rating, 3 favorites)
--   **Total Implemented:** 42
+-   **Total Implemented:** 46

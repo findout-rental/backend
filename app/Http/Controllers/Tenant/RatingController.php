@@ -6,11 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreRatingRequest;
 use App\Models\Booking;
 use App\Models\Rating;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Log;
 
 class RatingController extends Controller
 {
+    protected NotificationService $notificationService;
+
+    public function __construct(NotificationService $notificationService)
+    {
+        $this->notificationService = $notificationService;
+    }
     /**
      * Create a rating for a completed booking.
      * Only allows rating after check-out date has passed and booking is completed.
@@ -75,6 +82,11 @@ class RatingController extends Controller
 
             // Refresh apartment to get updated average rating
             $apartment = $booking->apartment->refresh();
+
+            // Create notification for owner about new review
+            $this->notificationService->create($apartment->owner, 'new_review', [
+                'apartment_title' => $apartment->title,
+            ]);
 
             return response()->json([
                 'success' => true,

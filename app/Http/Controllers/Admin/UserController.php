@@ -117,7 +117,9 @@ class UserController extends Controller
         $user->status = 'approved';
         $user->save();
 
-        // TODO: Send notification to user about approval
+        // Send notification to user about approval
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->create($user, 'account_approved');
 
         return response()->json([
             'success' => true,

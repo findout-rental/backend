@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Owner;
 use App\Http\Controllers\Controller;
 use App\Models\Apartment;
 use App\Models\Booking;
+use App\Services\NotificationService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -13,10 +14,12 @@ use Illuminate\Support\Facades\Log;
 class BookingController extends Controller
 {
     protected PaymentService $paymentService;
+    protected NotificationService $notificationService;
 
-    public function __construct(PaymentService $paymentService)
+    public function __construct(PaymentService $paymentService, NotificationService $notificationService)
     {
         $this->paymentService = $paymentService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -203,7 +206,10 @@ class BookingController extends Controller
                 'status' => 'approved',
             ]);
 
-            // TODO: Create notification for tenant
+            // Create notification for tenant
+            $this->notificationService->create($booking->tenant, 'booking_approved', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -305,7 +311,10 @@ class BookingController extends Controller
 
             DB::commit();
 
-            // TODO: Create notification for tenant
+            // Create notification for tenant
+            $this->notificationService->create($booking->tenant, 'booking_rejected', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -368,7 +377,10 @@ class BookingController extends Controller
                 'status' => 'modified_approved',
             ]);
 
-            // TODO: Create notification for tenant
+            // Create notification for tenant
+            $this->notificationService->create($booking->tenant, 'modification_approved', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -443,7 +455,10 @@ class BookingController extends Controller
 
             DB::commit();
 
-            // TODO: Create notification for tenant
+            // Create notification for tenant
+            $this->notificationService->create($booking->tenant, 'modification_rejected', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,

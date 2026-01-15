@@ -8,6 +8,7 @@ use App\Http\Requests\UpdateBookingRequest;
 use App\Models\Apartment;
 use App\Models\Booking;
 use App\Services\BookingService;
+use App\Services\NotificationService;
 use App\Services\PaymentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\DB;
@@ -17,11 +18,13 @@ class BookingController extends Controller
 {
     protected BookingService $bookingService;
     protected PaymentService $paymentService;
+    protected NotificationService $notificationService;
 
-    public function __construct(BookingService $bookingService, PaymentService $paymentService)
+    public function __construct(BookingService $bookingService, PaymentService $paymentService, NotificationService $notificationService)
     {
         $this->bookingService = $bookingService;
         $this->paymentService = $paymentService;
+        $this->notificationService = $notificationService;
     }
 
     /**
@@ -294,9 +297,10 @@ class BookingController extends Controller
 
             DB::commit();
 
-            // TODO: Create notifications for tenant and owner
-            // Notification::create(...) for tenant confirmation
-            // Notification::create(...) for owner booking request
+            // Create notifications
+            $this->notificationService->create($apartment->owner, 'booking_request_received', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -341,7 +345,7 @@ class BookingController extends Controller
 
         $booking = Booking::where('id', $id)
             ->where('tenant_id', $tenant->id)
-            ->with('apartment')
+            ->with('apartment.owner')
             ->first();
 
         if (!$booking) {
@@ -467,7 +471,10 @@ class BookingController extends Controller
 
             DB::commit();
 
-            // TODO: Create notification for owner about modification request
+            // Create notification for owner about modification request
+            $this->notificationService->create($booking->apartment->owner, 'booking_modified', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,
@@ -564,7 +571,10 @@ class BookingController extends Controller
 
             DB::commit();
 
-            // TODO: Create notifications for tenant and owner
+            // Create notification for owner about cancellation
+            $this->notificationService->create($booking->apartment->owner, 'booking_cancelled', [
+                'booking_id' => $booking->id,
+            ]);
 
             return response()->json([
                 'success' => true,

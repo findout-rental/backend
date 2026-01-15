@@ -3016,3 +3016,248 @@ For a fully WebSocket-based implementation, clients would send messages directly
 A fully WebSocket-based send implementation would allow clients to send messages directly through the WebSocket connection, eliminating the need for the HTTP bridge endpoint.
 
 ---
+
+### Notification Endpoints
+
+#### 46. List Notifications
+
+**Endpoint:** `GET /api/notifications`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Lists all notifications for the authenticated user with pagination and filtering options.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+
+-   `per_page` (integer, optional): Number of notifications per page (default: 20)
+-   `unread_only` (boolean, optional): If `true`, returns only unread notifications (default: `false`)
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "unread_count": 5,
+        "notifications": [
+            {
+                "id": 123,
+                "type": "booking_approved",
+                "title": "Booking Approved",
+                "title_ar": "تم الموافقة على الحجز",
+                "message": "Your booking request has been approved by the owner.",
+                "message_ar": "تمت الموافقة على طلب الحجز من قبل المالك.",
+                "booking_id": 45,
+                "message_id": null,
+                "is_read": false,
+                "created_at": "2025-12-25T15:30:00+00:00"
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 25,
+            "last_page": 2
+        }
+    }
+}
+```
+
+**Response (Empty):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "unread_count": 0,
+        "notifications": [],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 0,
+            "last_page": 1
+        }
+    }
+}
+```
+
+**Notification Types:**
+
+-   `booking_approved` - Booking request approved by owner
+-   `booking_rejected` - Booking request rejected by owner
+-   `booking_request_received` - New booking request received (owner)
+-   `booking_cancelled` - Booking cancelled by tenant (owner)
+-   `booking_modified` - Booking modification request (owner)
+-   `modification_approved` - Modification request approved (tenant)
+-   `modification_rejected` - Modification request rejected (tenant)
+-   `new_message` - New message received
+-   `new_review` - New review received (owner)
+-   `account_approved` - Account approved by admin
+
+**Scenario:** User opens notifications screen. System displays all notifications sorted by most recent, with unread count badge.
+
+---
+
+#### 47. Mark Notification as Read
+
+**Endpoint:** `PUT /api/notifications/{id}/read`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Marks a specific notification as read.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**URL Parameters:**
+
+-   `id` (integer, required): The ID of the notification to mark as read
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "Notification marked as read",
+    "data": {
+        "notification_id": 123,
+        "is_read": true
+    }
+}
+```
+
+**Response (Error - Not Found):**
+
+```json
+{
+    "success": false,
+    "message": "Notification not found"
+}
+```
+
+**Response (Error - Already Read):**
+
+```json
+{
+    "success": false,
+    "message": "Notification is already marked as read"
+}
+```
+
+**Business Logic:**
+
+-   Only the owner of the notification can mark it as read
+-   Prevents marking already-read notifications again
+-   Updates unread count automatically
+
+**Scenario:** User taps on a notification. System marks it as read and updates the UI.
+
+---
+
+#### 48. Mark All Notifications as Read
+
+**Endpoint:** `PUT /api/notifications/read-all`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Marks all unread notifications for the authenticated user as read.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "All notifications marked as read",
+    "data": {
+        "updated_count": 5
+    }
+}
+```
+
+**Response (No Unread Notifications):**
+
+```json
+{
+    "success": true,
+    "message": "All notifications marked as read",
+    "data": {
+        "updated_count": 0
+    }
+}
+```
+
+**Scenario:** User taps "Mark All as Read" button. System marks all unread notifications as read and updates the UI.
+
+---
+
+#### 49. Update FCM Token
+
+**Endpoint:** `POST /api/notifications/fcm-token`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Updates the user's Firebase Cloud Messaging (FCM) token for push notifications.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**Request Body:**
+
+```json
+{
+    "fcm_token": "dGhpcyBpcyBhIHNhbXBsZSBmY20gdG9rZW4..."
+}
+```
+
+**Request Fields:**
+
+-   `fcm_token` (required, string, max 255): The FCM token from the mobile device
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "FCM token updated successfully",
+    "data": {
+        "fcm_token": "dGhpcyBpcyBhIHNhbXBsZSBmY20gdG9rZW4..."
+    }
+}
+```
+
+**Response (Error - Validation):**
+
+```json
+{
+    "success": false,
+    "message": "Validation failed",
+    "errors": {
+        "fcm_token": [
+            "The fcm token field is required",
+            "The fcm token may not be greater than 255 characters"
+        ]
+    }
+}
+```
+
+**Business Logic:**
+
+-   FCM token is stored in the `users` table
+-   Token is used to send push notifications when user is offline
+-   Token should be updated whenever the app starts or token changes
+-   Old tokens are automatically replaced
+
+**Scenario:** User opens the app. System retrieves FCM token from device and sends it to the backend to enable push notifications.
+
+---

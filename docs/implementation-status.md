@@ -356,23 +356,55 @@ This document tracks the implementation progress of the FindOut Laravel Backend 
 
 ---
 
-### 11. ❌ Notifications System (Module 10)
+### 10. ✅ Notifications System (Module 10)
 
-**Status:** ❌ **NOT STARTED**
+**Status:** ✅ **COMPLETE**
 
-**Required Implementation:**
+#### Controllers
 
--   Notification creation
--   Push notification integration (FCM)
--   Notification history
--   FCM package integration
--   Notification classes for each type
--   `NotificationController`
--   Endpoints:
-    -   `GET /api/notifications` - List user's notifications
-    -   `PUT /api/notifications/{id}/read` - Mark notification as read
-    -   `PUT /api/notifications/read-all` - Mark all as read
-    -   `POST /api/notifications/fcm-token` - Update FCM token
+-   ✅ `NotificationController` - Notification management
+
+#### Endpoints
+
+-   ✅ `GET /api/notifications` - List user's notifications (with pagination and unread count)
+-   ✅ `PUT /api/notifications/{id}/read` - Mark notification as read
+-   ✅ `PUT /api/notifications/read-all` - Mark all notifications as read
+-   ✅ `POST /api/notifications/fcm-token` - Update FCM token
+
+#### Features
+
+-   ✅ Notification creation via `NotificationService`
+-   ✅ Push notification integration (FCM) via `FCMNotificationService`
+-   ✅ Notification history with pagination
+-   ✅ Unread count tracking
+-   ✅ Bilingual notification content (English/Arabic)
+-   ✅ Notification types:
+    -   `booking_approved` - Booking approved by owner
+    -   `booking_rejected` - Booking rejected by owner
+    -   `booking_request_received` - New booking request (owner)
+    -   `booking_cancelled` - Booking cancelled (owner)
+    -   `booking_modified` - Booking modification request (owner)
+    -   `modification_approved` - Modification approved (tenant)
+    -   `modification_rejected` - Modification rejected (tenant)
+    -   `new_message` - New message received
+    -   `new_review` - New review received (owner)
+    -   `account_approved` - Account approved by admin
+-   ✅ Notifications automatically created for:
+    -   Booking creation (owner notified)
+    -   Booking approval/rejection (tenant notified)
+    -   Booking modification (owner notified)
+    -   Modification approval/rejection (tenant notified)
+    -   Booking cancellation (owner notified)
+    -   Rating creation (owner notified)
+    -   Account approval (user notified)
+    -   Message sending (recipient notified via WebSocket + FCM)
+
+#### Notes
+
+-   FCM push notifications are sent when recipients are offline
+-   Notifications are stored in database with bilingual content
+-   FCM token is stored in `users` table
+-   Notification content is generated based on user's language preference
 
 ---
 
@@ -428,20 +460,20 @@ This document tracks the implementation progress of the FindOut Laravel Backend 
 -   ✅ **Module 7:** Rating System - **100% Complete**
 -   ✅ **Module 8:** Favorites Management - **100% Complete**
 -   ✅ **Module 9:** Messaging System - **100% Complete**
--   ❌ **Module 10:** Notifications System - **0% Complete**
+-   ✅ **Module 10:** Notifications System - **100% Complete**
 -   ❌ **Module 11:** Payment/Balance System - **0% Complete**
 -   ⚠️ **Module 12:** Admin Features - **~60% Complete** (User management, apartment overview, booking overview done; dashboard, balance operations, user rejection missing)
 
 ### Overall Progress
 
--   **Completed Modules:** 9 out of 12 (75%)
+-   **Completed Modules:** 10 out of 12 (83%)
 -   **Partially Completed:** 1 out of 12 (8%)
--   **Not Started:** 2 out of 12 (17%)
+-   **Not Started:** 1 out of 12 (9%)
 
 ### Endpoint Count
 
--   **Implemented:** 42 endpoints
--   **Estimated Remaining:** ~5-15 endpoints (based on requirements)
+-   **Implemented:** 46 endpoints
+-   **Estimated Remaining:** ~5-10 endpoints (based on requirements)
 
 ---
 
@@ -449,28 +481,25 @@ This document tracks the implementation progress of the FindOut Laravel Backend 
 
 According to the implementation order, the next module to implement is:
 
-### **Module 10: Notifications System**
+### **Module 11: Payment/Balance System**
 
 This module requires:
 
-1. Notification creation
-2. Push notification integration (FCM)
-3. Notification history
-4. FCM package integration
-5. Notification classes for each type
-6. `NotificationController`
-7. Endpoints:
-    - `GET /api/notifications` - List user's notifications
-    - `PUT /api/notifications/{id}/read` - Mark notification as read
-    - `PUT /api/notifications/read-all` - Mark all as read
-    - `POST /api/notifications/fcm-token` - Update FCM token
+1. Balance management endpoints
+2. Transaction history endpoints
+3. Balance operations (deposit/withdraw for admin)
+4. `BalanceController` or `TransactionController`
+5. Endpoints:
+    - `GET /api/balance` - Get current balance
+    - `GET /api/transactions` - Get transaction history
+    - `POST /api/balance/deposit` - Deposit money (admin only, or payment gateway)
 
 **Dependencies:**
 
 -   ✅ All migrations exist
--   ✅ Notification model exists
--   ✅ User model exists
--   ⚠️ FCM package needs to be installed
+-   ✅ Transaction model exists
+-   ✅ User model exists (with balance field)
+-   ✅ `PaymentService` exists (handles refunds, but needs balance endpoints)
 
 ---
 
@@ -495,4 +524,4 @@ This module requires:
 
 ---
 
-**Last Updated:** After completing Module 5 & 6 (Booking System & Booking Management)
+**Last Updated:** After completing Module 10 (Notifications System)
