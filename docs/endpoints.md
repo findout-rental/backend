@@ -679,6 +679,145 @@ PUT /api/admin/registrations/1/approve
 
 ---
 
+#### 13. Reject User Registration
+
+**Endpoint:** `PUT /api/admin/registrations/{user_id}/reject`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Rejects a pending user registration.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**URL Parameters:**
+
+-   `user_id` (required): The ID of the user to reject
+
+**Request Body:**
+
+```json
+{
+    "reason": "Invalid ID photo or incomplete information"
+}
+```
+
+**Request Fields:**
+
+-   `reason` (optional, string, max: 500): Reason for rejection
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "User rejected successfully",
+    "data": {
+        "user": {
+            "id": 1,
+            "mobile_number": "+963991877688",
+            "first_name": "John",
+            "last_name": "Doe",
+            "status": "rejected",
+            "rejection_reason": "Invalid ID photo or incomplete information"
+        }
+    }
+}
+```
+
+**Response (Error - Not Found):**
+
+```json
+{
+    "success": false,
+    "message": "User not found"
+}
+```
+
+**Response (Error - Already Rejected):**
+
+```json
+{
+    "success": false,
+    "message": "User is already rejected"
+}
+```
+
+**Response (Error - Cannot Reject Approved User):**
+
+```json
+{
+    "success": false,
+    "message": "Cannot reject an approved user"
+}
+```
+
+**Business Logic:**
+
+-   Only pending users can be rejected
+-   Cannot reject already approved users
+-   Sets user status to `rejected`
+-   Stores rejection reason (optional)
+
+**Scenario:** Admin reviews a pending registration and rejects it due to invalid documents or incomplete information.
+
+---
+
+### Dashboard Endpoints
+
+#### 14. Get Dashboard Statistics
+
+**Endpoint:** `GET /api/admin/dashboard/statistics`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Gets dashboard statistics for the admin panel.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "users": {
+            "total": 1234,
+            "tenants": 850,
+            "owners": 384,
+            "pending": 12
+        },
+        "apartments": {
+            "total": 456,
+            "active": 423,
+            "inactive": 33
+        },
+        "bookings": {
+            "total": 2890,
+            "active": 145,
+            "completed": 2745
+        },
+        "last_updated": "2025-12-25T15:30:00+00:00"
+    }
+}
+```
+
+**Business Logic:**
+
+-   Returns real-time statistics for users, apartments, and bookings
+-   User statistics include total, tenants, owners, and pending registrations
+-   Apartment statistics include total, active, and inactive
+-   Booking statistics include total, active (pending/approved/modified_approved), and completed
+-   Includes timestamp of when statistics were generated
+
+**Scenario:** Admin opens dashboard. System displays key metrics and statistics for platform overview.
+
+---
+
 ## Owner Endpoints
 
 Endpoints accessible only by users with the `owner` role.
@@ -3259,5 +3398,392 @@ Content-Type: application/json
 -   Old tokens are automatically replaced
 
 **Scenario:** User opens the app. System retrieves FCM token from device and sends it to the backend to enable push notifications.
+
+---
+
+### Balance & Transaction Endpoints
+
+#### 50. Get Current Balance
+
+**Endpoint:** `GET /api/balance`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Gets the current balance of the authenticated user.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "balance": 2500.00,
+        "updated_at": "2025-12-25T15:30:00+00:00"
+    }
+}
+```
+
+**Business Logic:**
+
+-   Returns the current balance from the `users` table
+-   Balance is updated in real-time when transactions occur
+-   Balance can be negative (for owners who have received payments)
+
+**Scenario:** User opens profile screen. System displays current balance prominently.
+
+---
+
+#### 51. Get Transaction History
+
+**Endpoint:** `GET /api/transactions`  
+**Access:** Protected (requires authentication + approved status + verified OTP)  
+**Description:** Gets the transaction history for the authenticated user with filtering and pagination.
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**Query Parameters:**
+
+-   `per_page` (integer, optional): Number of transactions per page (default: 20)
+-   `type` (string, optional): Filter by transaction type (`deposit`, `withdrawal`, `rent_payment`, `refund`, `cancellation_fee`)
+-   `date_from` (date, optional): Filter transactions from this date (format: YYYY-MM-DD)
+-   `date_to` (date, optional): Filter transactions to this date (format: YYYY-MM-DD)
+-   `sort` (string, optional): Sort order (`newest` or `oldest`, default: `newest`)
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "balance": 2500.00,
+        "transactions": [
+            {
+                "id": 1,
+                "type": "rent_payment",
+                "amount": 1500.00,
+                "description": "Rent payment for booking #12345",
+                "created_at": "2025-12-10T09:00:00+00:00",
+                "booking": {
+                    "id": 12345,
+                    "apartment": {
+                        "id": 10,
+                        "title": "Cozy Downtown Apartment",
+                        "address": "123 Main St, Cairo"
+                    }
+                },
+                "related_user": {
+                    "id": 5,
+                    "first_name": "John",
+                    "last_name": "Doe"
+                }
+            },
+            {
+                "id": 2,
+                "type": "deposit",
+                "amount": 500.00,
+                "description": "Cash deposit from admin",
+                "created_at": "2025-12-15T10:30:00+00:00"
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 25,
+            "last_page": 2
+        }
+    }
+}
+```
+
+**Transaction Types:**
+
+-   `deposit` - Money added to balance (admin deposit)
+-   `withdrawal` - Money withdrawn from balance (admin withdrawal)
+-   `rent_payment` - Rent paid for booking (tenant)
+-   `refund` - Refund received (tenant) or issued (owner)
+-   `cancellation_fee` - Cancellation fee deducted (tenant) or received (owner)
+
+**Business Logic:**
+
+-   Transactions are displayed in chronological order (newest first by default)
+-   Transactions related to bookings include booking and apartment details
+-   Transactions with related users (e.g., rent payments) include user details
+-   Balance is included in response for convenience
+
+**Scenario:** User opens transaction history screen. System displays all transactions with filtering options.
+
+---
+
+## Admin Endpoints
+
+### Balance Management Endpoints
+
+#### 52. Get User Balance (Admin)
+
+**Endpoint:** `GET /api/admin/users/{user_id}/balance`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Gets the balance of a specific user (admin only).
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**URL Parameters:**
+
+-   `user_id` (integer, required): The ID of the user
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "balance": 2500.00,
+        "updated_at": "2025-12-25T15:30:00+00:00"
+    }
+}
+```
+
+**Response (Error - Not Found):**
+
+```json
+{
+    "success": false,
+    "message": "User not found"
+}
+```
+
+**Scenario:** Admin views user details. System displays user's current balance.
+
+---
+
+#### 53. Deposit Money (Admin)
+
+**Endpoint:** `POST /api/admin/users/{user_id}/deposit`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Deposits money to a user's balance (admin only).
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**URL Parameters:**
+
+-   `user_id` (integer, required): The ID of the user
+
+**Request Body:**
+
+```json
+{
+    "amount": 500.00,
+    "description": "Cash deposit from tenant"
+}
+```
+
+**Request Fields:**
+
+-   `amount` (required, numeric, min: 0.01, max: 999999.99): The amount to deposit
+-   `description` (optional, string, max: 500): Description of the deposit
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "Money added successfully",
+    "data": {
+        "new_balance": 3000.00,
+        "transaction_id": 123
+    }
+}
+```
+
+**Response (Error - Validation):**
+
+```json
+{
+    "success": false,
+    "message": "Validation failed",
+    "errors": {
+        "amount": [
+            "The amount field is required",
+            "The amount must be at least 0.01"
+        ]
+    }
+}
+```
+
+**Business Logic:**
+
+-   Adds amount to user's balance
+-   Creates a `deposit` transaction record
+-   Updates user's balance in database
+-   Returns new balance and transaction ID
+
+**Scenario:** Admin receives cash payment from tenant. Admin deposits money to tenant's account.
+
+---
+
+#### 54. Withdraw Money (Admin)
+
+**Endpoint:** `POST /api/admin/users/{user_id}/withdraw`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Withdraws money from a user's balance (admin only).
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+Content-Type: application/json
+```
+
+**URL Parameters:**
+
+-   `user_id` (integer, required): The ID of the user
+
+**Request Body:**
+
+```json
+{
+    "amount": 2000.00,
+    "description": "Cash withdrawal for owner"
+}
+```
+
+**Request Fields:**
+
+-   `amount` (required, numeric, min: 0.01, max: 999999.99): The amount to withdraw
+-   `description` (optional, string, max: 500): Description of the withdrawal
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "message": "Money withdrawn successfully",
+    "data": {
+        "new_balance": 500.00,
+        "transaction_id": 124
+    }
+}
+```
+
+**Response (Error - Insufficient Balance):**
+
+```json
+{
+    "success": false,
+    "message": "Insufficient balance. Available: 500.00, Requested: 2000.00"
+}
+```
+
+**Response (Error - Not Found):**
+
+```json
+{
+    "success": false,
+    "message": "User not found"
+}
+```
+
+**Business Logic:**
+
+-   Checks if user has sufficient balance
+-   Deducts amount from user's balance
+-   Creates a `withdrawal` transaction record
+-   Updates user's balance in database
+-   Returns new balance and transaction ID
+
+**Scenario:** Owner requests cash withdrawal. Admin withdraws money from owner's account.
+
+---
+
+#### 55. Get User Transactions (Admin)
+
+**Endpoint:** `GET /api/admin/users/{user_id}/transactions`  
+**Access:** Protected (requires authentication + admin role + approved status + verified OTP)  
+**Description:** Gets the transaction history for a specific user (admin only).
+
+**Request Headers:**
+
+```
+Authorization: Bearer {token}
+```
+
+**URL Parameters:**
+
+-   `user_id` (integer, required): The ID of the user
+
+**Query Parameters:**
+
+-   `per_page` (integer, optional): Number of transactions per page (default: 20)
+-   `type` (string, optional): Filter by transaction type
+-   `date_from` (date, optional): Filter transactions from this date
+-   `date_to` (date, optional): Filter transactions to this date
+-   `sort` (string, optional): Sort order (`newest` or `oldest`, default: `newest`)
+
+**Response (Success):**
+
+```json
+{
+    "success": true,
+    "data": {
+        "balance": 2500.00,
+        "transactions": [
+            {
+                "id": 1,
+                "type": "rent_payment",
+                "amount": 1500.00,
+                "description": "Rent payment for booking #12345",
+                "created_at": "2025-12-10T09:00:00+00:00",
+                "booking": {
+                    "id": 12345,
+                    "apartment": {
+                        "id": 10,
+                        "title": "Cozy Downtown Apartment",
+                        "address": "123 Main St, Cairo"
+                    }
+                }
+            }
+        ],
+        "pagination": {
+            "current_page": 1,
+            "per_page": 20,
+            "total": 25,
+            "last_page": 2
+        }
+    }
+}
+```
+
+**Response (Error - Not Found):**
+
+```json
+{
+    "success": false,
+    "message": "User not found"
+}
+```
+
+**Business Logic:**
+
+-   Same filtering and pagination as user transaction history
+-   Admin can view any user's transaction history
+-   Includes balance for context
+
+**Scenario:** Admin views user details. Admin can see all transactions for that user.
 
 ---

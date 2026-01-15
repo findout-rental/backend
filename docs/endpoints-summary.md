@@ -39,6 +39,11 @@ Endpoints accessible by all authenticated users (Admin, Owner, Tenant).
 -   `PUT /api/notifications/read-all` - Mark all notifications as read
 -   `POST /api/notifications/fcm-token` - Update FCM token for push notifications
 
+### Balance & Transactions
+
+-   `GET /api/balance` - Get current balance
+-   `GET /api/transactions` - Get transaction history - with filtering and pagination
+
 ### WebSocket Endpoints
 
 **Connection:** `ws://localhost:8080/app/{app_key}` (WebSocket, not HTTP)
@@ -61,10 +66,15 @@ Endpoints accessible by all authenticated users (Admin, Owner, Tenant).
 
 Endpoints accessible only by users with the `admin` role.
 
+### Dashboard
+
+-   `GET /api/admin/dashboard/statistics` - Get dashboard statistics (users, apartments, bookings)
+
 ### User Management
 
 -   `GET /api/admin/users` - List all users
 -   `PUT /api/admin/registrations/{user_id}/approve` - Approve user registration
+-   `PUT /api/admin/registrations/{user_id}/reject` - Reject user registration
 
 ### Apartment Management
 
@@ -73,6 +83,13 @@ Endpoints accessible only by users with the `admin` role.
 ### Booking Management
 
 -   `GET /api/admin/bookings` - List all bookings - with filtering, searching, sorting, and pagination
+
+### Balance Operations
+
+-   `GET /api/admin/users/{user_id}/balance` - Get user balance
+-   `POST /api/admin/users/{user_id}/deposit` - Deposit money to user
+-   `POST /api/admin/users/{user_id}/withdraw` - Withdraw money from user
+-   `GET /api/admin/users/{user_id}/transactions` - Get user transaction history
 
 ---
 
@@ -131,8 +148,8 @@ Endpoints accessible only by users with the `tenant` role.
 
 ## Endpoint Count Summary
 
--   **Shared Endpoints:** 19 (6 authentication, 5 profile, 4 messaging, 4 notifications)
--   **Admin Endpoints:** 4 (2 user management, 1 apartment, 1 booking)
+-   **Shared Endpoints:** 21 (6 authentication, 5 profile, 4 messaging, 4 notifications, 2 balance/transactions)
+-   **Admin Endpoints:** 10 (1 dashboard, 3 user management, 1 apartment, 1 booking, 4 balance operations)
 -   **Owner Endpoints:** 12 (6 apartment management, 6 booking management)
 -   **Tenant Endpoints:** 11 (2 apartment browsing, 5 booking management, 1 rating, 3 favorites)
--   **Total Implemented:** 46
+-   **Total Implemented:** 54

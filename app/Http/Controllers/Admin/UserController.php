@@ -3,9 +3,14 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\DepositRequest;
+use App\Http\Requests\RejectUserRequest;
+use App\Http\Requests\WithdrawRequest;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 
 class UserController extends Controller
@@ -131,6 +136,305 @@ class UserController extends Controller
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'status' => $user->status,
+                ],
+            ],
+        ], 200);
+    }
+
+    /**
+     * Reject a user registration.
+     *
+     * @param int $user_id
+     * @param RejectUserRequest $request
+     * @return JsonResponse
+     */
+    public function reject(int $user_id, RejectUserRequest $request): JsonResponse
+    {
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        if ($user->status === 'rejected') {
+            return response()->json([
+                'success' => false,
+                'message' => 'User is already rejected',
+            ], 400);
+        }
+
+        if ($user->status === 'approved') {
+            return response()->json([
+                'success' => false,
+                'message' => 'Cannot reject an approved user',
+            ], 400);
+        }
+
+        $user->status = 'rejected';
+        $user->save();
+
+        // TODO: Send notification to user about rejection (if notification type exists)
+        // For now, we can add a 'account_rejected' notification type if needed
+
+        return response()->json([
+            'success' => true,
+            'message' => 'User rejected successfully',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'mobile_number' => $user->mobile_number,
+                    'first_name' => $user->first_name,
+                    'last_name' => $user->last_name,
+                    'status' => $user->status,
+                    'rejection_reason' => $request->reason,
+                ],
+            ],
+        ], 200);
+    }
+
+    /**
+     * Get user's balance.
+     *
+     * @param int $user_id
+     * @return JsonResponse
+     */
+    public function getBalance(int $user_id): JsonResponse
+    {
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'balance' => (float) $user->balance,
+                'updated_at' => $user->updated_at->toIso8601String(),
+            ],
+        ], 200);
+    }
+
+    /**
+     * Deposit money to user's balance.
+     *
+     * @param int $user_id
+     * @param DepositRequest $request
+     * @return JsonResponse
+     */
+    public function deposit(int $user_id, DepositRequest $request): JsonResponse
+    {
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $amount = (float) $request->amount;
+            $description = $request->description ?? 'Cash deposit from admin';
+
+            // Update user balance
+            $user->balance = (float) $user->balance + $amount;
+            $user->save();
+
+            // Create transaction record
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'deposit',
+                'amount' => $amount,
+                'description' => $description,
+                'created_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Money added successfully',
+                'data' => [
+                    'new_balance' => (float) $user->balance,
+                    'transaction_id' => $transaction->id,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process deposit. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Withdraw money from user's balance.
+     *
+     * @param int $user_id
+     * @param WithdrawRequest $request
+     * @return JsonResponse
+     */
+    public function withdraw(int $user_id, WithdrawRequest $request): JsonResponse
+    {
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        $amount = (float) $request->amount;
+
+        // Check if user has sufficient balance
+        if ($user->balance < $amount) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Insufficient balance. Available: ' . number_format($user->balance, 2) . ', Requested: ' . number_format($amount, 2),
+            ], 400);
+        }
+
+        try {
+            DB::beginTransaction();
+
+            $description = $request->description ?? 'Cash withdrawal by admin';
+
+            // Update user balance
+            $user->balance = (float) $user->balance - $amount;
+            $user->save();
+
+            // Create transaction record
+            $transaction = Transaction::create([
+                'user_id' => $user->id,
+                'type' => 'withdrawal',
+                'amount' => $amount,
+                'description' => $description,
+                'created_at' => now(),
+            ]);
+
+            DB::commit();
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Money withdrawn successfully',
+                'data' => [
+                    'new_balance' => (float) $user->balance,
+                    'transaction_id' => $transaction->id,
+                ],
+            ], 200);
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return response()->json([
+                'success' => false,
+                'message' => 'Failed to process withdrawal. Please try again.',
+            ], 500);
+        }
+    }
+
+    /**
+     * Get user's transaction history.
+     *
+     * @param int $user_id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function getTransactions(int $user_id, Request $request): JsonResponse
+    {
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // Get query parameters
+        $perPage = $request->get('per_page', 20);
+        $type = $request->get('type');
+        $dateFrom = $request->get('date_from');
+        $dateTo = $request->get('date_to');
+        $sort = $request->get('sort', 'newest');
+
+        // Build query
+        $query = Transaction::where('user_id', $user->id)
+            ->with(['booking.apartment', 'relatedUser']);
+
+        // Filter by type
+        if ($type) {
+            $query->where('type', $type);
+        }
+
+        // Filter by date range
+        if ($dateFrom) {
+            $query->whereDate('created_at', '>=', $dateFrom);
+        }
+        if ($dateTo) {
+            $query->whereDate('created_at', '<=', $dateTo);
+        }
+
+        // Sort
+        $sortOrder = $sort === 'oldest' ? 'asc' : 'desc';
+        $query->orderBy('created_at', $sortOrder);
+
+        // Get transactions with pagination
+        $transactions = $query->paginate($perPage);
+
+        // Format transactions
+        $formattedTransactions = $transactions->map(function ($transaction) {
+            $data = [
+                'id' => $transaction->id,
+                'type' => $transaction->type,
+                'amount' => (float) $transaction->amount,
+                'description' => $transaction->description,
+                'created_at' => $transaction->created_at->toIso8601String(),
+            ];
+
+            // Add related booking if exists
+            if ($transaction->booking) {
+                $data['booking'] = [
+                    'id' => $transaction->booking->id,
+                    'apartment' => $transaction->booking->apartment ? [
+                        'id' => $transaction->booking->apartment->id,
+                        'title' => $transaction->booking->apartment->title,
+                        'address' => $transaction->booking->apartment->address,
+                    ] : null,
+                ];
+            }
+
+            // Add related user if exists
+            if ($transaction->relatedUser) {
+                $data['related_user'] = [
+                    'id' => $transaction->relatedUser->id,
+                    'first_name' => $transaction->relatedUser->first_name,
+                    'last_name' => $transaction->relatedUser->last_name,
+                ];
+            }
+
+            return $data;
+        });
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'balance' => (float) $user->balance,
+                'transactions' => $formattedTransactions,
+                'pagination' => [
+                    'current_page' => $transactions->currentPage(),
+                    'per_page' => $transactions->perPage(),
+                    'total' => $transactions->total(),
+                    'last_page' => $transactions->lastPage(),
                 ],
             ],
         ], 200);

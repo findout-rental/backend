@@ -40,6 +40,14 @@ Route::middleware(['auth:api', 'approved', 'otp.verified'])->group(function () {
     // View another user's profile (available to all authenticated users)
     Route::get('/users/{userId}', [\App\Http\Controllers\UserController::class, 'show']);
 
+    // Balance and transaction routes (shared between tenants and owners)
+    Route::prefix('balance')->group(function () {
+        Route::get('/', [\App\Http\Controllers\BalanceController::class, 'getBalance']);
+    });
+    Route::prefix('transactions')->group(function () {
+        Route::get('/', [\App\Http\Controllers\BalanceController::class, 'getTransactions']);
+    });
+
     // Notification routes (shared between tenants and owners)
     Route::prefix('notifications')->group(function () {
         Route::get('/', [\App\Http\Controllers\NotificationController::class, 'index']);
@@ -110,9 +118,24 @@ Route::middleware(['auth:api', 'approved', 'otp.verified'])->group(function () {
 
     // Admin routes (require authentication + admin role + approved status + verified OTP)
     Route::middleware('admin')->prefix('admin')->group(function () {
+        // Dashboard
+        Route::get('/dashboard/statistics', [\App\Http\Controllers\Admin\DashboardController::class, 'statistics']);
+        
+        // User management
         Route::get('/users', [\App\Http\Controllers\Admin\UserController::class, 'index']);
         Route::put('/registrations/{user_id}/approve', [\App\Http\Controllers\Admin\UserController::class, 'approve']);
+        Route::put('/registrations/{user_id}/reject', [\App\Http\Controllers\Admin\UserController::class, 'reject']);
+        
+        // Content overview
         Route::get('/apartments', [\App\Http\Controllers\Admin\ApartmentController::class, 'index']);
         Route::get('/bookings', [\App\Http\Controllers\Admin\BookingController::class, 'index']);
+        
+        // Admin balance operations
+        Route::prefix('users')->group(function () {
+            Route::get('/{user_id}/balance', [\App\Http\Controllers\Admin\UserController::class, 'getBalance']);
+            Route::post('/{user_id}/deposit', [\App\Http\Controllers\Admin\UserController::class, 'deposit']);
+            Route::post('/{user_id}/withdraw', [\App\Http\Controllers\Admin\UserController::class, 'withdraw']);
+            Route::get('/{user_id}/transactions', [\App\Http\Controllers\Admin\UserController::class, 'getTransactions']);
+        });
     });
 });
