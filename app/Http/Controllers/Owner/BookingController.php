@@ -442,16 +442,24 @@ class BookingController extends Controller
         try {
             DB::beginTransaction();
 
-            // TODO: Revert to original booking details if we stored them
-            // For now, just change status back to approved
-            // In a full implementation, we'd need to store original values
-            
+            // Note: When modification is rejected, we revert status to 'approved'
+            // The booking retains the modified values (dates, guests, rent) but status is reverted
+            // To fully revert to original values, we would need to:
+            // 1. Add fields to store original values (original_check_in_date, original_check_out_date, etc.)
+            // 2. Store original values when modification is requested
+            // 3. Restore them here when rejected
+            // For now, the booking keeps modified values but status is 'approved'
             $booking->update([
                 'status' => 'approved',
             ]);
 
-            // TODO: If rent was increased and paid, refund the difference
-            // If rent was decreased, no additional action needed
+            // Note: If rent was increased and tenant paid the difference, we should refund it
+            // To implement this, we would need to:
+            // 1. Track the original rent amount when modification is requested
+            // 2. Calculate the difference if new rent > original rent
+            // 3. Check if tenant paid the difference (via transaction records)
+            // 4. Process refund using PaymentService if difference was paid
+            // For now, no refund is processed - this is a future enhancement
 
             DB::commit();
 

@@ -287,6 +287,170 @@
               "path": ["admin", "registrations", "1", "approve"]
             }
           }
+        },
+        {
+          "name": "Reject User Registration",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"reason\": \"Invalid ID photo or incomplete information\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/registrations/1/reject",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "registrations", "1", "reject"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Dashboard",
+      "item": [
+        {
+          "name": "Get Dashboard Statistics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/dashboard/statistics",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "dashboard", "statistics"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Balance Operations",
+      "item": [
+        {
+          "name": "Get User Balance",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/1/balance",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "1", "balance"]
+            }
+          }
+        },
+        {
+          "name": "Deposit Money",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 500.00,\n  \"description\": \"Cash deposit from tenant\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/1/deposit",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "1", "deposit"]
+            }
+          }
+        },
+        {
+          "name": "Withdraw Money",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              },
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 2000.00,\n  \"description\": \"Cash withdrawal for owner\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/admin/users/1/withdraw",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "1", "withdraw"]
+            }
+          }
+        },
+        {
+          "name": "Get User Transactions",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/admin/users/1/transactions?per_page=20",
+              "host": ["{{base_url}}"],
+              "path": ["admin", "users", "1", "transactions"],
+              "query": [
+                {
+                  "key": "per_page",
+                  "value": "20"
+                },
+                {
+                  "key": "type",
+                  "value": "",
+                  "disabled": true,
+                  "description": "deposit, withdrawal, rent_payment, refund, cancellation_fee"
+                },
+                {
+                  "key": "date_from",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "date_to",
+                  "value": "",
+                  "disabled": true
+                },
+                {
+                  "key": "sort",
+                  "value": "newest",
+                  "disabled": true,
+                  "description": "newest, oldest"
+                }
+              ]
+            }
+          }
         }
       ]
     },

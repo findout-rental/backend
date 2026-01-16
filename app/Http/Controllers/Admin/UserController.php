@@ -176,8 +176,9 @@ class UserController extends Controller
         $user->status = 'rejected';
         $user->save();
 
-        // TODO: Send notification to user about rejection (if notification type exists)
-        // For now, we can add a 'account_rejected' notification type if needed
+        // Send notification to user about rejection
+        $notificationService = app(\App\Services\NotificationService::class);
+        $notificationService->create($user, 'account_rejected');
 
         return response()->json([
             'success' => true,

@@ -111,6 +111,13 @@ class NotificationService
                 $content['message_ar'] = 'تمت الموافقة على حسابك. يمكنك الآن استخدام جميع الميزات.';
                 break;
 
+            case 'account_rejected':
+                $content['title'] = 'Account Rejected';
+                $content['title_ar'] = 'تم رفض الحساب';
+                $content['message'] = 'Your account registration has been rejected. Please contact support for more information.';
+                $content['message_ar'] = 'تم رفض تسجيل حسابك. يرجى الاتصال بالدعم لمزيد من المعلومات.';
+                break;
+
             case 'booking_cancelled':
                 $content['title'] = 'Booking Cancelled';
                 $content['title_ar'] = 'تم إلغاء الحجز';

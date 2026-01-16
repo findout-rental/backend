@@ -136,9 +136,16 @@ class FCMNotificationService
      */
     public function isUserViewingConversation(int $userId, int $conversationPartnerId): bool
     {
-        // TODO: Implement Redis presence channel check
-        // For now, return false (always send FCM)
-        // In production, check if user is subscribed to: user.{userId} or conversation.{userId}.{partnerId}
+        // Note: This method checks if a user is currently viewing a conversation
+        // to avoid sending unnecessary FCM notifications when they're already online
+        // 
+        // To implement this properly, we would need to:
+        // 1. Use Laravel Reverb presence channels to track online users
+        // 2. Check Redis for user presence in channel: private-user.{userId}
+        // 3. Or check if user is subscribed to conversation channel
+        // 
+        // For now, we always return false (always send FCM) to ensure notifications are delivered
+        // This is a performance optimization that can be implemented later
         return false;
     }
 }
