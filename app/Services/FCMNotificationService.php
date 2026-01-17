@@ -127,6 +127,73 @@ class FCMNotificationService
     }
 
     /**
+     * Send a general FCM push notification.
+     *
+     * @param User $recipient
+     * @param string $type Notification type (e.g., 'new_user_registration', 'new_apartment', 'new_booking')
+     * @param string $title Notification title
+     * @param string $body Notification body/message
+     * @param array $data Additional data to send with notification
+     * @return array
+     */
+    public function sendNotification(User $recipient, string $type, string $title, string $body, array $data = []): array
+    {
+        // Check if recipient has FCM token
+        if (empty($recipient->fcm_token)) {
+            Log::info('FCM token not available for user', ['user_id' => $recipient->id]);
+            return [
+                'success' => false,
+                'message' => 'FCM token not available',
+            ];
+        }
+
+        // Check if messaging is initialized
+        if (!$this->messaging) {
+            return [
+                'success' => false,
+                'message' => 'FCM not initialized',
+            ];
+        }
+
+        try {
+            $notification = Notification::create($title, $body);
+
+            $messageData = array_merge([
+                'type' => $type,
+            ], $data);
+
+            $cloudMessage = CloudMessage::withTarget('token', $recipient->fcm_token)
+                ->withNotification($notification)
+                ->withData($messageData);
+
+            $result = $this->messaging->send($cloudMessage);
+
+            Log::info('FCM notification sent successfully', [
+                'user_id' => $recipient->id,
+                'type' => $type,
+                'fcm_result' => $result,
+            ]);
+
+            return [
+                'success' => true,
+                'message' => 'FCM notification sent',
+                'result' => $result,
+            ];
+        } catch (\Exception $e) {
+            Log::error('Failed to send FCM notification', [
+                'user_id' => $recipient->id,
+                'type' => $type,
+                'error' => $e->getMessage(),
+            ]);
+
+            return [
+                'success' => false,
+                'message' => 'Failed to send FCM notification: ' . $e->getMessage(),
+            ];
+        }
+    }
+
+    /**
      * Check if user is actively viewing a conversation (presence check).
      * This is a simple implementation - in production, you'd use Redis presence channels.
      *

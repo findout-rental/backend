@@ -7,6 +7,8 @@ use App\Http\Requests\StoreApartmentRequest;
 use App\Http\Requests\UpdateApartmentRequest;
 use App\Models\Apartment;
 use App\Models\Booking;
+use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
@@ -106,6 +108,16 @@ class ApartmentController extends Controller
             'amenities' => $request->amenities ?? [],
             'status' => $request->status ?? 'active',
         ]);
+
+        // Notify all admins about new apartment
+        $notificationService = app(NotificationService::class);
+        $admins = User::where('role', 'admin')->where('status', 'approved')->get();
+        foreach ($admins as $admin) {
+            $notificationService->create($admin, 'new_apartment', [
+                'apartment_address' => $apartment->address,
+                'owner_name' => $user->first_name . ' ' . $user->last_name,
+            ]);
+        }
 
         return response()->json([
             'success' => true,

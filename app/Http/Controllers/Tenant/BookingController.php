@@ -302,6 +302,16 @@ class BookingController extends Controller
                 'booking_id' => $booking->id,
             ]);
 
+            // Notify all admins about new booking
+            $admins = \App\Models\User::where('role', 'admin')->where('status', 'approved')->get();
+            foreach ($admins as $admin) {
+                $this->notificationService->create($admin, 'new_booking', [
+                    'tenant_name' => $tenant->first_name . ' ' . $tenant->last_name,
+                    'apartment_address' => $apartment->address,
+                    'booking_id' => $booking->id,
+                ]);
+            }
+
             return response()->json([
                 'success' => true,
                 'message' => 'Booking request submitted successfully',

@@ -128,7 +128,9 @@ Route::middleware(['auth:api', 'approved', 'otp.verified'])->group(function () {
         
         // Content overview
         Route::get('/apartments', [\App\Http\Controllers\Admin\ApartmentController::class, 'index']);
+        Route::get('/apartments/{id}', [\App\Http\Controllers\Admin\ApartmentController::class, 'show']);
         Route::get('/bookings', [\App\Http\Controllers\Admin\BookingController::class, 'index']);
+        Route::get('/bookings/{id}', [\App\Http\Controllers\Admin\BookingController::class, 'show']);
         
         // Admin balance operations
         Route::prefix('users')->group(function () {
@@ -136,6 +138,7 @@ Route::middleware(['auth:api', 'approved', 'otp.verified'])->group(function () {
             Route::post('/{user_id}/deposit', [\App\Http\Controllers\Admin\UserController::class, 'deposit']);
             Route::post('/{user_id}/withdraw', [\App\Http\Controllers\Admin\UserController::class, 'withdraw']);
             Route::get('/{user_id}/transactions', [\App\Http\Controllers\Admin\UserController::class, 'getTransactions']);
+            Route::post('/{user_id}/upload-photo', [\App\Http\Controllers\Admin\UserController::class, 'uploadPhoto']);
         });
     });
 });

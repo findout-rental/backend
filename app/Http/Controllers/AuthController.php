@@ -8,6 +8,7 @@ use App\Http\Requests\SendOtpRequest;
 use App\Http\Requests\VerifyOtpRequest;
 use App\Models\User;
 use App\Services\OtpService;
+use App\Services\NotificationService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
@@ -149,6 +150,16 @@ class AuthController extends Controller
             'language_preference' => 'en',
             'balance' => 0.00,
         ]);
+
+        // Notify all admins about new user registration
+        $notificationService = app(NotificationService::class);
+        $admins = User::where('role', 'admin')->where('status', 'approved')->get();
+        foreach ($admins as $admin) {
+            $notificationService->create($admin, 'new_user_registration', [
+                'user_name' => $user->first_name . ' ' . $user->last_name,
+                'user_role' => $user->role,
+            ]);
+        }
 
         return response()->json([
             'success' => true,

@@ -100,7 +100,7 @@ class ApartmentController extends Controller
                 }, $apartment->photos) : [],
                 'amenities' => $apartment->amenities ?? [],
                 'total_bookings' => $totalBookings,
-                'average_rating' => number_format($averageRating, 1),
+                'average_rating' => $averageRating,
                 'created_at' => $apartment->created_at->toIso8601String(),
                 'updated_at' => $apartment->updated_at->toIso8601String(),
                 'owner' => [
@@ -125,6 +125,69 @@ class ApartmentController extends Controller
                     'total' => $apartments->total(),
                 ],
             ],
+        ]);
+    }
+
+    /**
+     * Get a specific apartment's details.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $apartment = Apartment::with(['owner', 'bookings', 'ratings'])
+            ->find($id);
+
+        if (!$apartment) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Apartment not found',
+            ], 404);
+        }
+
+        $owner = $apartment->owner;
+        $totalBookings = $apartment->bookings()->count();
+        $averageRating = $apartment->ratings()->avg('rating') ?? 0.0;
+
+        $apartmentData = [
+            'id' => $apartment->id,
+            'status' => $apartment->status,
+            'governorate' => $apartment->governorate,
+            'governorate_ar' => $apartment->governorate_ar,
+            'city' => $apartment->city,
+            'city_ar' => $apartment->city_ar,
+            'address' => $apartment->address,
+            'address_ar' => $apartment->address_ar,
+            'nightly_price' => number_format($apartment->nightly_price, 2),
+            'monthly_price' => number_format($apartment->monthly_price, 2),
+            'bedrooms' => $apartment->bedrooms,
+            'bathrooms' => $apartment->bathrooms,
+            'living_rooms' => $apartment->living_rooms,
+            'size' => number_format($apartment->size, 2),
+            'photos' => $apartment->photos ? array_map(function ($photo) {
+                return '/storage/' . $photo;
+            }, $apartment->photos) : [],
+            'amenities' => $apartment->amenities ?? [],
+            'description' => $apartment->description,
+            'description_ar' => $apartment->description_ar,
+            'total_bookings' => $totalBookings,
+            'average_rating' => number_format($averageRating, 1),
+            'created_at' => $apartment->created_at->toIso8601String(),
+            'updated_at' => $apartment->updated_at->toIso8601String(),
+            'owner' => [
+                'id' => $owner->id,
+                'first_name' => $owner->first_name,
+                'last_name' => $owner->last_name,
+                'mobile_number' => $owner->mobile_number,
+                'personal_photo' => $owner->personal_photo ? '/storage/' . $owner->personal_photo : null,
+            ],
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Apartment retrieved successfully',
+            'data' => $apartmentData,
         ]);
     }
 }

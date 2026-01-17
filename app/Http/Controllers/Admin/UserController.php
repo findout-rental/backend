@@ -67,6 +67,14 @@ class UserController extends Controller
         $perPage = $request->get('per_page', 50);
         $users = $query->paginate($perPage);
 
+        // Calculate statistics
+        $statistics = [
+            'total' => User::count(),
+            'approved' => User::where('status', 'approved')->count(),
+            'pending' => User::where('status', 'pending')->count(),
+            'rejected' => User::where('status', 'rejected')->count(),
+        ];
+
         // Format response
         $formattedUsers = $users->map(function ($user) {
             return [
@@ -75,6 +83,7 @@ class UserController extends Controller
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'personal_photo' => $user->personal_photo ? Storage::url($user->personal_photo) : null,
+                'id_photo' => $user->id_photo ? Storage::url($user->id_photo) : null,
                 'role' => $user->role,
                 'status' => $user->status,
                 'created_at' => $user->created_at->toISOString(),
@@ -85,6 +94,7 @@ class UserController extends Controller
             'success' => true,
             'data' => [
                 'users' => $formattedUsers,
+                'statistics' => $statistics,
                 'pagination' => [
                     'current_page' => $users->currentPage(),
                     'last_page' => $users->lastPage(),
@@ -436,6 +446,54 @@ class UserController extends Controller
                     'per_page' => $transactions->perPage(),
                     'total' => $transactions->total(),
                     'last_page' => $transactions->lastPage(),
+                ],
+            ],
+        ], 200);
+    }
+
+    /**
+     * Upload photo for a user (admin only).
+     *
+     * @param int $user_id
+     * @param Request $request
+     * @return JsonResponse
+     */
+    public function uploadPhoto(int $user_id, Request $request): JsonResponse
+    {
+        $request->validate([
+            'photo' => [
+                'required',
+                'image',
+                'mimes:jpeg,jpg,png',
+                'max:5120', // 5MB
+            ],
+        ]);
+
+        $user = User::find($user_id);
+
+        if (!$user) {
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found',
+            ], 404);
+        }
+
+        // Delete old photo if exists
+        if ($user->personal_photo && Storage::disk('public')->exists($user->personal_photo)) {
+            Storage::disk('public')->delete($user->personal_photo);
+        }
+
+        // Store new photo
+        $photoPath = $request->file('photo')->store('users/photos', 'public');
+        $user->update(['personal_photo' => $photoPath]);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Photo uploaded successfully',
+            'data' => [
+                'user' => [
+                    'id' => $user->id,
+                    'personal_photo' => Storage::url($photoPath),
                 ],
             ],
         ], 200);

@@ -6,18 +6,27 @@ use App\Models\Booking;
 use App\Models\Message;
 use App\Models\Notification;
 use App\Models\User;
+use Illuminate\Support\Facades\Log;
 
 class NotificationService
 {
+    protected $fcmService;
+
+    public function __construct(FCMNotificationService $fcmService = null)
+    {
+        $this->fcmService = $fcmService ?? app(FCMNotificationService::class);
+    }
+
     /**
      * Create a notification in the database.
      *
      * @param User $user
      * @param string $type
      * @param array $data
+     * @param bool $sendPush Whether to send FCM push notification (default: true)
      * @return Notification
      */
-    public function create(User $user, string $type, array $data = []): Notification
+    public function create(User $user, string $type, array $data = [], bool $sendPush = true): Notification
     {
         // Get language preference
         $language = $user->language_preference ?? 'en';
@@ -25,7 +34,7 @@ class NotificationService
         // Generate title and message based on type and language
         $content = $this->getNotificationContent($type, $language, $data);
 
-        return Notification::create([
+        $notification = Notification::create([
             'user_id' => $user->id,
             'type' => $type,
             'title' => $content['title'],
@@ -36,10 +45,38 @@ class NotificationService
             'message_id' => $data['message_id'] ?? null,
             'is_read' => false,
         ]);
+
+        // Send FCM push notification if enabled and user has FCM token
+        if ($sendPush && !empty($user->fcm_token)) {
+            try {
+                $title = $language === 'ar' ? $content['title_ar'] : $content['title'];
+                $body = $language === 'ar' ? $content['message_ar'] : $content['message'];
+                
+                $pushData = [];
+                if (isset($data['booking_id'])) {
+                    $pushData['booking_id'] = (string) $data['booking_id'];
+                }
+                if (isset($data['message_id'])) {
+                    $pushData['message_id'] = (string) $data['message_id'];
+                }
+
+                $this->fcmService->sendNotification($user, $type, $title, $body, $pushData);
+            } catch (\Exception $e) {
+                // Log error but don't fail the notification creation
+                Log::error('Failed to send FCM push notification', [
+                    'user_id' => $user->id,
+                    'notification_id' => $notification->id,
+                    'error' => $e->getMessage(),
+                ]);
+            }
+        }
+
+        return $notification;
     }
 
     /**
      * Create a notification for a new message.
+     * Note: FCM push notification is handled separately by WebSocketMessageService.
      *
      * @param User $recipient
      * @param Message $message
@@ -47,11 +84,12 @@ class NotificationService
      */
     public function createMessageNotification(User $recipient, Message $message): Notification
     {
+        // Don't send FCM push here - WebSocketMessageService handles it separately
         return $this->create($recipient, 'new_message', [
             'message_id' => $message->id,
             'sender' => $message->sender,
             'message_text' => $message->message_text,
-        ]);
+        ], false); // sendPush = false
     }
 
     /**
@@ -152,6 +190,33 @@ class NotificationService
                 $content['title_ar'] = 'تم استلام تقييم جديد';
                 $content['message'] = 'You have received a new review for ' . $apartmentTitle . '.';
                 $content['message_ar'] = 'لقد تلقيت تقييماً جديداً لـ ' . $apartmentTitle . '.';
+                break;
+
+            case 'new_user_registration':
+                $userName = $data['user_name'] ?? 'A new user';
+                $userRole = $data['user_role'] ?? 'user';
+                $content['title'] = 'New User Registration';
+                $content['title_ar'] = 'تسجيل مستخدم جديد';
+                $content['message'] = $userName . ' (' . ucfirst($userRole) . ') has registered and is pending approval.';
+                $content['message_ar'] = $userName . ' (' . ($userRole === 'tenant' ? 'مستأجر' : ($userRole === 'owner' ? 'مالك' : 'مستخدم')) . ') قام بالتسجيل وهو في انتظار الموافقة.';
+                break;
+
+            case 'new_apartment':
+                $apartmentAddress = $data['apartment_address'] ?? 'a new apartment';
+                $ownerName = $data['owner_name'] ?? 'An owner';
+                $content['title'] = 'New Apartment Published';
+                $content['title_ar'] = 'شقة جديدة تم نشرها';
+                $content['message'] = 'A new apartment at ' . $apartmentAddress . ' has been published by ' . $ownerName . '.';
+                $content['message_ar'] = 'تم نشر شقة جديدة في ' . $apartmentAddress . ' بواسطة ' . $ownerName . '.';
+                break;
+
+            case 'new_booking':
+                $tenantName = $data['tenant_name'] ?? 'A tenant';
+                $apartmentAddress = $data['apartment_address'] ?? 'an apartment';
+                $content['title'] = 'New Booking Request';
+                $content['title_ar'] = 'طلب حجز جديد';
+                $content['message'] = $tenantName . ' has submitted a new booking request for ' . $apartmentAddress . '.';
+                $content['message_ar'] = $tenantName . ' قدم طلب حجز جديد لـ ' . $apartmentAddress . '.';
                 break;
 
             default:

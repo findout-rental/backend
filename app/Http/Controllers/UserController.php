@@ -232,12 +232,16 @@ class UserController extends Controller
             'data' => [
                 'user' => [
                     'id' => $user->id,
+                    'mobile_number' => $user->mobile_number,
                     'first_name' => $user->first_name,
                     'last_name' => $user->last_name,
                     'personal_photo' => $user->personal_photo ? Storage::url($user->personal_photo) : null,
+                    'id_photo' => $user->id_photo ? Storage::url($user->id_photo) : null,
+                    'date_of_birth' => $user->date_of_birth?->toISOString(),
                     'role' => $user->role,
                     'status' => $user->status,
                     'created_at' => $user->created_at->toISOString(),
+                    'balance' => (float) $user->balance,
                 ],
                 'statistics' => $statistics,
             ],

@@ -123,5 +123,71 @@ class BookingController extends Controller
             ],
         ]);
     }
+
+    /**
+     * Get a specific booking's details.
+     *
+     * @param int $id
+     * @return JsonResponse
+     */
+    public function show(int $id): JsonResponse
+    {
+        $booking = Booking::with(['tenant', 'apartment.owner', 'apartment.photos'])
+            ->find($id);
+
+        if (!$booking) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Booking not found',
+            ], 404);
+        }
+
+        $tenant = $booking->tenant;
+        $apartment = $booking->apartment;
+        $owner = $apartment->owner ?? null;
+
+        $bookingData = [
+            'id' => $booking->id,
+            'status' => $booking->status,
+            'check_in_date' => $booking->check_in_date->format('Y-m-d'),
+            'check_out_date' => $booking->check_out_date->format('Y-m-d'),
+            'number_of_guests' => $booking->number_of_guests,
+            'payment_method' => $booking->payment_method,
+            'total_rent' => number_format($booking->total_rent, 2),
+            'created_at' => $booking->created_at->toIso8601String(),
+            'updated_at' => $booking->updated_at->toIso8601String(),
+            'tenant' => [
+                'id' => $tenant->id,
+                'first_name' => $tenant->first_name,
+                'last_name' => $tenant->last_name,
+                'mobile_number' => $tenant->mobile_number,
+                'personal_photo' => $tenant->personal_photo ? '/storage/' . $tenant->personal_photo : null,
+            ],
+            'apartment' => [
+                'id' => $apartment->id,
+                'address' => $apartment->address,
+                'address_ar' => $apartment->address_ar,
+                'city' => $apartment->city,
+                'city_ar' => $apartment->city_ar,
+                'governorate' => $apartment->governorate,
+                'governorate_ar' => $apartment->governorate_ar,
+                'photos' => $apartment->photos ? array_map(function ($photo) {
+                    return '/storage/' . $photo;
+                }, $apartment->photos) : [],
+            ],
+            'owner' => $owner ? [
+                'id' => $owner->id,
+                'first_name' => $owner->first_name,
+                'last_name' => $owner->last_name,
+                'mobile_number' => $owner->mobile_number,
+            ] : null,
+        ];
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Booking retrieved successfully',
+            'data' => $bookingData,
+        ]);
+    }
 }
 
